@@ -6,8 +6,8 @@ class QuestionsDatabase < SQLite3::Database
 
   def initialize
     super('questions.db')
-    self.type_translation = TRUE
-    self.results_as_hash = TRUE
+    self.type_translation = true
+    self.results_as_hash = true
   end
 
 end
@@ -26,8 +26,41 @@ class Users
         id=?
       SQL
 
-    return NIL unless user.length > 0
+    return nil unless user.length > 0
     Users.new(user.first)
+  end
+
+  def self.all
+    users = QuestionsDatabase.instance.execute(<<-SQL)
+      SELECT
+        *
+      FROM
+        users
+    SQL
+
+    users.map {|user| Users.new(user)}
+  end
+
+  def self.find_by_name(fname, lname)
+    id = QuestionsDatabase.instance.execute(<<-SQL, fname, lname)
+      SELECT
+        id
+      FROM
+        users
+      WHERE
+        fname = ? AND lname = ?
+    SQL
+
+    return nil unless id.length > 0
+    Users.new(id.first).id
+  end
+
+  def authored_questions(question_author_id)
+    Questions.find_by_author_id(question_author_id)
+  end
+
+  def authored_replies(question_reply_id)
+    Replies.find_by_author_id(question_reply_id)
   end
 
   def initialize(options)
@@ -59,15 +92,39 @@ class Questions
         id=?
       SQL
 
-    return NIL unless question.length > 0
+    return nil unless question.length > 0
     Questions.new(question.first)
   end
+
+
+  def self.find_by_author_id(author_id)
+    question = QuestionsDatabase.instance.execute(<<-SQL, author_id)
+      SELECT
+        *
+      FROM
+        questions
+      WHERE
+        author_id=?
+      SQL
+
+    return nil unless question.length > 0
+    Questions.new(question.first)
+  end
+
+  def replies(question_id)
+    Replies.find_by_SQR_id(question_id)
+  end
+
 
   def initialize(options)
     @id = options['id']
     @title = options['title']
     @body = options['body']
     @author_id = options['author_id']
+  end
+
+  def author(author_id)
+    Users.find_by_id(author_id)
   end
 
   def create
@@ -92,7 +149,7 @@ class Question_follows
         user_id=?
       SQL
 
-    return NIL unless question_follows.length > 0
+    return nil unless question_follows.length > 0
     Question_follows.new(question_follows.first)
   end
 
@@ -106,7 +163,7 @@ class Question_follows
         question_id=?
       SQL
 
-    return NIL unless users_following.length > 0
+    return nil unless users_following.length > 0
     Question_follows.new(users_following.first)
   end
 
@@ -137,9 +194,43 @@ class Replies
         id=?
       SQL
 
-    return NIL unless replies.length > 0
+    return nil unless replies.length > 0
     Replies.new(replies.first)
   end
+
+  def author
+    Users.find_by_id(self.author_id)
+  end
+
+  def self.find_by_author_id(author_id)
+    replies = QuestionsDatabase.instance.execute(<<-SQL, author_id)
+      SELECT
+        *
+      FROM
+        replies
+      WHERE
+        author_id=?
+      SQL
+
+    return nil unless replies.length > 0
+    replies.map {|reply|Replies.new(reply)}
+  end
+
+  def self.find_by_SQR_id(subject_question_reference)
+    replies = QuestionsDatabase.instance.execute(<<-SQL, subject_question_reference)
+      SELECT
+        *
+      FROM
+        replies
+      WHERE
+        subject_question_reference=?
+      SQL
+
+    return nil unless replies.length > 0
+    replies.map {|reply|Replies.new(reply)}
+  end
+
+
 
   def initialize(options)
     @id = options['id']
@@ -171,7 +262,7 @@ class Question_likes
         question_id=?
       SQL
 
-    return NIL unless num_likes.length > 0
+    return nil unless num_likes.length > 0
     Question_likes.new(num_likes.first)
   end
 

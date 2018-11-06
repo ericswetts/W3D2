@@ -74,7 +74,8 @@ INSERT INTO
 VALUES
   (1, NULL, 2, 'THEY WERE NOT LIGHT ENOUGH.'),
   (2, NULL, 1, 'When you can figure out how to recurse through a problem.'),
-  (1, 1, 3, 'Good answer. hahaha');
+  (1, 1, 3, 'Good answer. hahaha'),
+  (1,3,2, "This was a great question!");
 
 INSERT INTO
   question_likes(question_id,liked)
