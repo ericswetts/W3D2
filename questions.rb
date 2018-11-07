@@ -63,18 +63,16 @@ class Users
     Replies.find_by_author_id(question_reply_id)
   end
 
+  def followed_questions
+    Question_follows.followed_questions_user_id(self.id)
+  end
+
   def initialize(options)
     @id = options['id']
     @fname = options['fname']
     @lname = options['lname']
   end
 
-  def create
-  end
-
-  def update
-
-  end
 end
 
 
@@ -96,6 +94,9 @@ class Questions
     Questions.new(question.first)
   end
 
+  def followers
+    Question_follows.followers_for_question_id(self.id)
+  end
 
   def self.find_by_author_id(author_id)
     question = QuestionsDatabase.instance.execute(<<-SQL, author_id)
@@ -127,12 +128,6 @@ class Questions
     Users.find_by_id(author_id)
   end
 
-  def create
-  end
-
-  def update
-
-  end
 end
 
 class Question_follows
@@ -150,7 +145,7 @@ class Question_follows
       SQL
 
     return nil unless question_follows.length > 0
-    Question_follows.new(question_follows.first)
+    question_follows.map {|question| Question_follows.new(question)}
   end
 
   def self.find_by_question_id(question_id)
@@ -164,7 +159,17 @@ class Question_follows
       SQL
 
     return nil unless users_following.length > 0
-    Question_follows.new(users_following.first)
+    users_following.map {|user| Question_follows.new(user)}
+  end
+
+  def self.followers_for_question_id(question_id)
+    all_user_ids = Question_follows.find_by_question_id(question_id)
+    all_user_ids.map{|user_id| Users.find_by_id(user_id.user_id)}
+  end
+
+  def self.followed_questions_user_id(user_id)
+    all_question_ids = Question_follows.find_by_user_id(user_id)
+    all_question_ids.map {|question_id| Questions.find_by_id(question_id.question_id)}
   end
 
   def initialize(options)
@@ -172,12 +177,6 @@ class Question_follows
     @question_id = options['question_id']
   end
 
-  def create
-  end
-
-  def update
-
-  end
 end
 
 class Replies
@@ -200,6 +199,27 @@ class Replies
 
   def author
     Users.find_by_id(self.author_id)
+  end
+
+  def parent_reply
+    Replies.find_by_id(self.parent_reply_id)
+  end
+
+  def question
+    Questions.find_by_id(self.subject_question_reference)
+  end
+
+  def child_replies
+    child_replies = QuestionsDatabase.instance.execute(<<-SQL, self.id)
+      SELECT
+        *
+      FROM
+        replies
+      WHERE
+        parent_reply_id=?
+      SQL
+    return nil unless child_replies.length > 0
+    child_replies.map {|reply|Replies.new(reply)}
   end
 
   def self.find_by_author_id(author_id)
@@ -240,12 +260,6 @@ class Replies
     @body = options['body']
   end
 
-  def create
-  end
-
-  def update
-
-  end
 end
 
 class Question_likes
@@ -271,10 +285,4 @@ class Question_likes
     @liked = options['liked']
   end
 
-  def create
-  end
-
-  def update
-
-  end
 end
